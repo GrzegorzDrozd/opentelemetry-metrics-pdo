@@ -35,6 +35,35 @@ if ($m instanceof \OpenTelemetry\SDK\Metrics\MeterProvider) {
 }
 ```
 
+### Adding Custom Attributes
+
+You can add custom attributes to your PDO metrics either globally or per specific PDO/PDOStatement instance. The following methods are available:
+
+```php
+// Add a single attribute
+PDOMetrics::addAttribute('key', 'value'); // globally
+PDOMetrics::addAttribute('key', 'value', $pdoInstance); // for specific PDO instance
+PDOMetrics::addAttribute('key', 'value', $pdoStmt); // for specific Statement instance
+
+// Add multiple attributes at once
+PDOMetrics::addAttributes(['key1' => 'value1', 'key2' => 'value2']); // globally
+PDOMetrics::addAttributes(['key1' => 'value1', 'key2' => 'value2'], $pdoInstance); // for specific PDO instance
+PDOMetrics::addAttributes(['key1' => 'value1', 'key2' => 'value2'], $pdoStmt); // for specific Statement instance
+
+// Remove an attribute
+PDOMetrics::removeAttribute('key'); // globally
+PDOMetrics::removeAttribute('key', $pdoInstance); // for specific PDO instance
+PDOMetrics::removeAttribute('key', $pdoStmt); // for specific Statement instance
+
+// Get current attributes
+$attributes = PDOMetrics::getAttributes(); // get global attributes
+$attributes = PDOMetrics::getAttributes($pdoInstance); // get attributes for specific PDO instance
+$attributes = PDOMetrics::getAttributes($pdoStmt); // get attributes for specific Statement instance
+```
+These attributes will be included with all metrics generated for the relevant scope (global or instance-specific). Instance-specific attributes are combined with global attributes when metrics are generated.
+          
+This is useful for tracking information that might be lost from spans due to sampling on traces.
+
 ### Additional configuration options
 
 #### Disable context tracking
