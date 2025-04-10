@@ -27,6 +27,11 @@ class PDOMetricsTracker
     protected WeakMap $attributes;
 
     /**
+     * @var array<string, mixed>
+     */
+    protected array $globalAttributes = [];
+    
+    /**
      * @var WeakMap<PDOStatement, WeakReference>|WeakMap<object, mixed>
      */
     protected WeakMap $statementMapToPdoMap;
@@ -49,13 +54,17 @@ class PDOMetricsTracker
 
     public function stop(PDO|PDOStatement $pdo): float
     {
+        // this could happen when the register ran twice!
+        if ($this->timers->offsetExists($pdo) === false) {
+            return 0.0;
+        }
         $duration = microtime(true) - $this->timers[$pdo];
         unset($this->timers[$pdo]);
 
         return $duration;
     }
 
-    public function addAttributes(PDO $pdo, array $attributes = []): array
+    public function addAttributes(PDO|PDOStatement $pdo, array $attributes = []): array
     {
         $this->attributes[$pdo] ??= [];
         if (!empty($attributes)) {
@@ -63,12 +72,22 @@ class PDOMetricsTracker
             $this->attributes[$pdo] = [...$this->attributes[$pdo], ...$attributes];
         }
 
-        return $this->attributes[$pdo];
+        return [...$this->attributes[$pdo], ...$this->globalAttributes];
     }
 
-    public function getAttributes(PDO $pdo): array
+    public function addGlobalAttributes(array $attributes = []): array
     {
-        return $this->attributes[$pdo] ?? [];
+        return $this->globalAttributes = [...$this->globalAttributes, ...$attributes];
+    }
+
+    public function getGlobalAttributes(): array
+    {
+        return $this->globalAttributes;
+    }
+
+    public function getAttributes(PDO|PDOStatement $pdo): array
+    {
+        return [...($this->attributes[$pdo] ?? []), ...$this->globalAttributes];
     }
 
     public function trackConnection(PDO $pdo): void

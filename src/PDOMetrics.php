@@ -31,6 +31,9 @@ class PDOMetrics
     protected static MeterInterface $meter;
     protected static PDOMetricsTracker $tracker;
 
+    /**
+     * @codeCoverageIgnore No need to check this method
+     */
     public static function register(): void
     {
         self::$tracker = new PDOMetricsTracker(
@@ -74,6 +77,41 @@ class PDOMetrics
         register_shutdown_function(self::cleanUpConnections(...));
     }
 
+    public static function addAttribute($key, $value, PDO|PDOStatement|null $pdo = null): void
+    {
+        if (null !== $pdo) {
+            self::$tracker->addAttributes($pdo, [$key => $value]);
+            return;
+        }
+        self::$tracker->addGlobalAttributes([$key => $value]);
+    }
+
+    public static function addAttributes(array $attributes, PDO|PDOStatement|null $pdo = null): void
+    {
+        if (null !== $pdo) {
+            self::$tracker->addAttributes($pdo, $attributes);
+            return;
+        }
+        self::$tracker->addGlobalAttributes($attributes);
+    }
+
+    public static function removeAttribute($key, PDO|PDOStatement|null $pdo = null): void
+    {
+        if (null !== $pdo) {
+            self::$tracker->addAttributes($pdo, [$key => null]);
+            return;
+        }
+        self::$tracker->addGlobalAttributes([$key => null]);
+    }
+
+    public static function getAttributes(PDO|PDOStatement|null $pdo = null): array
+    {
+        if (null !== $pdo) {
+            return self::$tracker->getAttributes($pdo);
+        }
+        return self::$tracker->getGlobalAttributes();
+    }
+
     /**
      * @return MeterInterface
      */
@@ -94,16 +132,19 @@ class PDOMetrics
         $context = self::getContext(self::$tracker->isTrackContext());
 
         $statement = null;
+        $attributes = [];
         if ($pdo instanceof PDOStatement) {
             $statement = $pdo->queryString;
+            // get statement specific attributes, connection specific are below
+            $attributes = self::$tracker->getAttributes($pdo);
             $pdo = self::$tracker->getConnectionFromStatement($pdo);
         } elseif (!empty($params[0])) {
             $statement = $params[0];
         }
 
-        $attributes = [];
+
         if (null !== $pdo) {
-            $attributes = self::$tracker->getAttributes($pdo);
+            $attributes = [...self::$tracker->getAttributes($pdo), ...$attributes];
         }
 
         if (null !== $statement && self::$tracker->isTrackStatements()) {
@@ -159,6 +200,9 @@ class PDOMetrics
         }
     }
 
+    /**
+     * @codeCoverageIgnore
+     */
     protected static function isContextTrackingEnabled(): bool
     {
         return self::readBoolConfig(
@@ -167,6 +211,9 @@ class PDOMetrics
         );
     }
 
+    /**
+     * @codeCoverageIgnore
+     */
     protected static function isStatementTrackingEnabled(): bool
     {
         return self::readBoolConfig(
@@ -175,6 +222,9 @@ class PDOMetrics
         );
     }
 
+    /**
+     * @codeCoverageIgnore
+     */
     protected static function isRowsReturnedMetricEnabled(): bool
     {
         return self::readBoolConfig(
@@ -183,6 +233,9 @@ class PDOMetrics
         );
     }
 
+    /**
+     * @codeCoverageIgnore
+     */
     protected static function readBoolConfig($envName, $configName, bool $default = true): bool
     {
         /** @noinspection ClassConstantCanBeUsedInspection */

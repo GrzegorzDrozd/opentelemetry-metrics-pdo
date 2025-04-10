@@ -30,6 +30,25 @@ class PDOMetricsTrackerTest extends TestCase
         $this->assertSame(['foo'=>'bar', 'baz'=>'zzz'], $tracker->addAttributes($pdo, ['baz'=>'zzz']));
 
         $this->assertSame(['foo'=>'bar', 'baz'=>'zzz'], $tracker->getAttributes($pdo));
+    }
+
+    public function testStatementSpecificAttributes(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $stmt = $pdo->prepare('select 1');
+        $tracker = new PDOMetricsTracker(true, true, true);
+        $tracker->addAttributes($stmt, ['foo'=>'bar']);
+        $this->assertSame(['foo'=>'bar'], $tracker->getAttributes($stmt));
+    }
+
+    public function testGlobalAttributes(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $stmt = $pdo->prepare('select 1');
+        $tracker = new PDOMetricsTracker(true, true, true);
+        $tracker->addGlobalAttributes( ['foo'=>'bar']);
+        $this->assertSame(['foo'=>'bar'], $tracker->getAttributes($stmt));
+        $this->assertSame(['foo'=>'bar'], $tracker->getGlobalAttributes());
 
     }
 
